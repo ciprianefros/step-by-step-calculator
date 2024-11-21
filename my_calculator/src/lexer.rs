@@ -16,6 +16,7 @@ pub enum Token {
     Cotg,
     LParen,
     RParen,
+    EOF
 }
 #[derive(Clone, Debug)]
 pub struct Lexer {
@@ -27,7 +28,9 @@ impl Lexer {
     }
     pub fn tokenize(&mut self, input: &str) {
         if input.len() > 10_000 {
-            eprintln!("The mathematical expression is too large! Please enter a reasonable expression!");
+            eprintln!(
+                "The mathematical expression is too large! Please enter a reasonable expression!"
+            );
             return;
         }
         let mut chars = input.chars().peekable();
@@ -118,6 +121,7 @@ impl Lexer {
                 }
             }
         }
+        self.tokens.push(Token::EOF);
     }
     //pub fn get_tokens(self) -> Vec<Token> {
     //   self.tokens.clone()
