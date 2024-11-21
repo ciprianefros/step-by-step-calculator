@@ -1,13 +1,19 @@
 use crate::lexer::Token;
 use crate::parser::ASTNode;
 
+
 pub struct Evaluator;
 
 impl Evaluator {
+
     pub fn evaluate_and_print(mut ast: ASTNode) -> f64 {
+        let mut previous_step: Option<String> = None;
         while !Self::is_single_node(&ast) {
             let expression_string = Self::ast_to_string(&ast);
-            println!("= {}", expression_string);
+            if Some(&expression_string) != previous_step.as_ref() {
+                println!("= {}", expression_string);
+                previous_step = Some(expression_string);
+            }
 
             ast = Self::reduce_ast(ast);
         }
