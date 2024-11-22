@@ -5,7 +5,6 @@ use crate::parser::ASTNode;
 pub struct Evaluator;
 
 impl Evaluator {
-
     pub fn evaluate_and_print(mut ast: ASTNode) -> f64 {
         let mut previous_step: Option<String> = None;
         while !Self::is_single_node(&ast) {

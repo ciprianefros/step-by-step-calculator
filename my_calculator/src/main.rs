@@ -7,7 +7,7 @@ use parser::Parser;
 use evaluator::Evaluator;
 
 fn main() {
-    let input = "-2 - -5 + 4 * 12 + log(10)";
+    let input = "2 * ((3 + 4)) + 5";
     let mut lexer = Lexer::new();
     lexer.tokenize(input);
 

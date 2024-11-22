@@ -33,7 +33,7 @@ impl Parser {
     }
     fn next_token(&mut self) -> Option<&Token> {
         self.position += 1;
-        println!("Current token at position {}: {:?}", self.position, self.current_token());
+        //println!("Current token at position {}: {:?}", self.position, self.current_token());
         self.current_token()
     }
     pub fn parse_expression(&mut self) -> Result<ASTNode, String> {
@@ -44,6 +44,9 @@ impl Parser {
             Err("Unexpected input after end of expression".to_string())
         }
     }
+    fn parse_inner_expression(&mut self) -> Result<ASTNode, String> {
+        self.parse_binary_op(0)
+    }
     fn parse_primary(&mut self) -> Result<ASTNode, String> {
         if let Some(token) = self.current_token().cloned() {
             match token {
@@ -52,7 +55,7 @@ impl Parser {
                     Ok(ASTNode::Number(value))
                 }
                 Token::Minus => {
-                    self.next_token(); // Consume the minus sign
+                    self.next_token(); // Consume the minus
                     let operand = self.parse_primary()?; // Parse the operand
                     Ok(ASTNode::UnaryOp {
                         op: Token::Minus,
@@ -61,7 +64,7 @@ impl Parser {
                 }
                 Token::LParen => {
                     self.next_token(); // Consume '('
-                    let expr = self.parse_expression()?; // Parse inside parentheses
+                    let expr = self.parse_inner_expression()?; // Parse the inner expression
                     if let Some(Token::RParen) = self.current_token() {
                         self.next_token(); // Consume ')'
                         Ok(expr)
@@ -69,17 +72,9 @@ impl Parser {
                         Err("Expected right parenthesis".to_string())
                     }
                 }
-                Token::EOF => {
-                    // If we explicitly encounter EOF in `parse_primary`, treat it as unexpected
-                    Err("Unexpected end of input".to_string())
-                }
-                _ => {
-                    println!("Unexpected token in parse_primary: {:?}", token);
-                    Err("Unexpected token".to_string())
-                }
+                _ => Err("Unexpected token".to_string()),
             }
         } else {
-            // If there's no token, return a generic error
             Err("Unexpected end of input".to_string())
         }
     }
@@ -94,8 +89,8 @@ impl Parser {
     fn parse_binary_op(&mut self, min_precedence: u8) -> Result<ASTNode, String> {
         let mut left = self.parse_primary()?;
         while let Some(op) = self.current_token() {
-            if op == &Token::EOF {
-                break; // Stop parsing when EOF is encountered
+            if op == &Token::EOF || op == &Token::RParen {
+                break; 
             }
     
             let precedence = Parser::get_precedence(op);
