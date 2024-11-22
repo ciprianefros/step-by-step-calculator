@@ -2,6 +2,8 @@ use crate::lexer::Token;
 
 pub enum ASTNode {
     Number(f64),
+    Pi, 
+    Euler,
     BinaryOp {
         left: Box<ASTNode>,
         op: Token,
@@ -15,6 +17,7 @@ pub enum ASTNode {
         func: Token,
         argument: Box<ASTNode>,
     },
+    Grouping(Box<ASTNode>)
 }
 pub struct Parser {
     tokens: Vec<Token>,
@@ -54,6 +57,14 @@ impl Parser {
                     self.next_token(); // Consume the number
                     Ok(ASTNode::Number(value))
                 }
+                Token::Pi => {
+                    self.next_token();
+                    Ok(ASTNode::Pi)
+                }
+                Token::Euler => {
+                    self.next_token();
+                    Ok(ASTNode::Euler)
+                }
                 Token::Minus => {
                     self.next_token(); // Consume the minus
                     let operand = self.parse_primary()?; // Parse the operand
@@ -67,7 +78,7 @@ impl Parser {
                     let expr = self.parse_inner_expression()?; // Parse the inner expression
                     if let Some(Token::RParen) = self.current_token() {
                         self.next_token(); // Consume ')'
-                        Ok(expr)
+                        Ok(ASTNode::Grouping(Box::new(expr)))
                     } else {
                         Err("Expected right parenthesis".to_string())
                     }

@@ -1,6 +1,6 @@
 use crate::lexer::Token;
 use crate::parser::ASTNode;
-
+use std::f64::consts::{PI, E};
 
 pub struct Evaluator;
 
@@ -18,7 +18,7 @@ impl Evaluator {
         }
 
         if let ASTNode::Number(result) = ast {
-            println!("= {}", result);
+            println!("= {:.2}", result);
             result
         } else {
             panic!("Evaluation did not reduce to a single number!");
@@ -73,6 +73,11 @@ impl Evaluator {
                     }
                 }
             }
+            ASTNode::Grouping(expression) => {
+                Self::reduce_ast(*expression)
+            }
+            ASTNode::Pi => ASTNode::Number(PI),
+            ASTNode::Euler => ASTNode::Number(E),
             _ => ast,
         }
     }
@@ -115,6 +120,8 @@ impl Evaluator {
     fn ast_to_string(ast: &ASTNode) -> String {
         match ast {
             ASTNode::Number(value) => format!("{}", value),
+            ASTNode::Pi => "π".to_string(),
+            ASTNode::Euler => "e".to_string(),
             ASTNode::BinaryOp { left, op, right } => {
                 let left_str = Self::ast_to_string(left);
                 let right_str = Self::ast_to_string(right);
@@ -147,6 +154,9 @@ impl Evaluator {
                     _ => panic!("Unknown function"),
                 };
                 format!("{}({})", func_str, arg_str)
+            },
+            ASTNode::Grouping(expression) => {
+                format!("({})", Self::ast_to_string(expression))
             }
         }
     }
