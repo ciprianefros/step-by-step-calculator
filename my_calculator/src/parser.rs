@@ -83,6 +83,27 @@ impl Parser {
                         Err("Expected right parenthesis".to_string())
                     }
                 }
+                Token::Sin | Token::Cos | Token::Tg | Token::Cotg => {
+                    let func = token; 
+                    self.next_token(); 
+    
+                    if let Some(Token::LParen) = self.current_token() {
+                        self.next_token(); // Consume '('
+                        let argument = self.parse_inner_expression()?; // Parse the inner expression
+    
+                        if let Some(Token::RParen) = self.current_token() {
+                            self.next_token(); // Consume ')'
+                            Ok(ASTNode::Function {
+                                func,
+                                argument: Box::new(argument),
+                            })
+                        } else {
+                            Err("Expected right parenthesis after function argument".to_string())
+                        }
+                    } else {
+                        Err("Expected '(' after function name".to_string())
+                    }
+                }    
                 _ => Err("Unexpected token".to_string()),
             }
         } else {
