@@ -41,7 +41,7 @@ impl Parser {
     }
     pub fn parse_expression(&mut self) -> Result<ASTNode, String> {
         let expr = self.parse_binary_op(0)?;
-        if let Some(Token::EOF) = self.current_token() {
+        if let Some(Token::Eof) = self.current_token() {
             Ok(expr)
         } else {
             Err("Unexpected input after end of expression".to_string())
@@ -54,7 +54,7 @@ impl Parser {
         if let Some(token) = self.current_token().cloned() {
             match token {
                 Token::Number(value) => {
-                    self.next_token(); // Consume the number
+                    self.next_token(); 
                     Ok(ASTNode::Number(value))
                 }
                 Token::Pi => {
@@ -66,18 +66,18 @@ impl Parser {
                     Ok(ASTNode::Euler)
                 }
                 Token::Minus => {
-                    self.next_token(); // Consume the minus
-                    let operand = self.parse_primary()?; // Parse the operand
+                    self.next_token(); 
+                    let operand = self.parse_primary()?; 
                     Ok(ASTNode::UnaryOp {
                         op: Token::Minus,
                         operand: Box::new(operand),
                     })
                 }
                 Token::LParen => {
-                    self.next_token(); // Consume '('
-                    let expr = self.parse_inner_expression()?; // Parse the inner expression
+                    self.next_token(); 
+                    let expr = self.parse_inner_expression()?; 
                     if let Some(Token::RParen) = self.current_token() {
-                        self.next_token(); // Consume ')'
+                        self.next_token(); 
                         Ok(ASTNode::Grouping(Box::new(expr)))
                     } else {
                         Err("Expected right parenthesis".to_string())
@@ -88,11 +88,11 @@ impl Parser {
                     self.next_token(); 
     
                     if let Some(Token::LParen) = self.current_token() {
-                        self.next_token(); // Consume '('
-                        let argument = self.parse_inner_expression()?; // Parse the inner expression
+                        self.next_token(); 
+                        let argument = self.parse_inner_expression()?; 
     
                         if let Some(Token::RParen) = self.current_token() {
-                            self.next_token(); // Consume ')'
+                            self.next_token(); 
                             Ok(ASTNode::Function {
                                 func,
                                 argument: Box::new(argument),
@@ -121,16 +121,16 @@ impl Parser {
     fn parse_binary_op(&mut self, min_precedence: u8) -> Result<ASTNode, String> {
         let mut left = self.parse_primary()?;
         while let Some(op) = self.current_token() {
-            if op == &Token::EOF || op == &Token::RParen {
+            if op == &Token::Eof || op == &Token::RParen {
                 break; 
             }
     
             let precedence = Parser::get_precedence(op);
             if precedence < min_precedence {
-                break; // Stop parsing if operator precedence is too low
+                break; 
             }
     
-            let op = self.current_token().unwrap().clone();
+            let op = *self.current_token().unwrap();
             self.next_token();
     
             let right = self.parse_binary_op(precedence + 1)?;

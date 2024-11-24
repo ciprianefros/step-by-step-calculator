@@ -8,24 +8,29 @@ use parser::Parser;
 use evaluator::Evaluator;
 
 fn main() {
-    
-    print!("Enter an mathematical expression: ");
-    io::stdout().flush().unwrap();
-    let mut input  = String::new();
-    io::stdin().read_line(&mut input).expect("Failed to read input");
+    loop {
+        let mut input  = String::new();
+        print!("Enter an mathematical expression(type \"quit\" to close application): ");
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut input).expect("Failed to read input");
 
-    let input = input.trim();
-
-    let mut lexer = Lexer::new();
-    lexer.tokenize(input);
-    println!("Tokens: {:?}", lexer.tokens);
-
-    let mut parser = Parser::new(lexer.tokens.clone());
-    match parser.parse_expression() {
-        Ok(ast) => {
-            println!("Evaluating...");
-            Evaluator::evaluate_and_print(ast);
+        let input = input.trim();
+        if input == "quit".to_string() {
+            break;
         }
-        Err(err) => eprintln!("Error: {}", err),
+
+        let mut lexer = Lexer::new();
+        lexer.tokenize(input);
+        println!("Tokens: {:?}", lexer.tokens);
+
+        let mut parser = Parser::new(lexer.tokens.clone());
+        match parser.parse_expression() {
+            Ok(ast) => {
+                println!("Evaluating...");
+                Evaluator::evaluate_and_print(ast);
+            }
+            Err(err) => eprintln!("Error: {}", err),
+        }
     }
+    
 }

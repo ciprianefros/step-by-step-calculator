@@ -16,7 +16,7 @@ pub enum Token {
     Cotg,
     LParen,
     RParen,
-    EOF
+    Eof,
 }
 #[derive(Clone, Debug)]
 pub struct Lexer {
@@ -89,7 +89,7 @@ impl Lexer {
                         eprintln!("Invalid number: {}", buffer);
                     }
                 }
-                'a'..'z' => {
+                'a'..='z' => {
                     buffer.clear();
                     while let Some(&ch) = chars.peek() {
                         if ch.is_alphabetic() {
@@ -121,7 +121,7 @@ impl Lexer {
                 }
             }
         }
-        self.tokens.push(Token::EOF);
+        self.tokens.push(Token::Eof);
     }
     //pub fn get_tokens(self) -> Vec<Token> {
     //   self.tokens.clone()
