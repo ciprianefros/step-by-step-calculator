@@ -2,16 +2,29 @@ use crate::lexer::Token;
 use crate::parser::ASTNode;
 use std::f64::consts::{PI, E};
 
-pub struct Evaluator;
+
+#[derive(Clone, Debug)]
+pub struct Evaluator {
+    evaluation_steps: Vec<String>,
+}
 
 impl Evaluator {
-    pub fn evaluate_and_print(mut ast: ASTNode) -> f64 {
+    pub fn new() -> Self {
+        Self {
+            evaluation_steps: Vec::new(),
+        }
+    }
+    pub fn get_evaluation_steps(self) -> Vec<String> {
+        self.evaluation_steps.clone()
+    }
+    pub fn evaluate_and_print(&mut self, mut ast: ASTNode) -> f64 {
         let mut previous_step: Option<String> = None;
         while !Self::is_single_node(&ast) {
             let expression_string = Self::ast_to_string(&ast);
             if Some(&expression_string) != previous_step.as_ref() {
-                println!("= {}", expression_string);
-                previous_step = Some(expression_string);
+                println!("= {}", expression_string.clone());
+                previous_step = Some(expression_string.clone());
+                self.evaluation_steps.push(format!("= {}",expression_string));
             }
 
             ast = Self::reduce_ast(ast);
@@ -19,6 +32,7 @@ impl Evaluator {
 
         if let ASTNode::Number(result) = ast {
             println!("= {:.2}", result);
+            self.evaluation_steps.push(format!("= {:.2}", result));
             result
         } else {
             panic!("Evaluation did not reduce to a single number!");
