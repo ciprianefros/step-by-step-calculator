@@ -10,3 +10,4 @@ pub fn save_to_file(file_name: &str, steps: &[String]) -> Result<(), std::io::Er
     }
     Ok(())
 }
+

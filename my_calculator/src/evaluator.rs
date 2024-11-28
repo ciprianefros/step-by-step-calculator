@@ -122,12 +122,41 @@ impl Evaluator {
 
     fn evaluate_function(func: Token, arg: f64) -> f64 {
         match func {
-            Token::Sqrt => arg.sqrt(),
-            Token::Log => arg.log10(),
+            Token::Sqrt => {
+                if arg < 0.0 {
+                    panic!("Can't calculate square root of negative number!");
+                }
+                else {
+                    arg.sqrt()
+                }
+            }
+            Token::Log => {
+                if arg < 0.0 {
+                    panic!("Can't calculate logarithm of negative number!");
+                } else {
+                    arg.log10()
+                } 
+            }
             Token::Sin => arg.to_radians().sin(),
             Token::Cos => arg.to_radians().cos(),
-            Token::Tg => arg.to_radians().tan(),
-            Token::Cotg => 1.0 / arg.to_radians().tan(),
+            Token::Tg => {
+                let radians = arg.to_radians();
+
+                if (radians / (PI / 2.0)).rem_euclid(2.0).abs() < 1e-10 {
+                    panic!("Can't calculate tg for that number!");
+                } else {
+                    radians.tan()
+                }
+            }
+            Token::Cotg => {
+                let radians = arg.to_radians();
+
+                if (radians / (PI)).rem_euclid(1.0).abs() < 1e-10 {
+                    panic!("Can't calculate cotg for that number!");
+                } else {
+                    1.0 / radians.tan()
+                }
+            }
             _ => panic!("Unknown function"),
         }
     }
