@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::fs::{read_dir, remove_file};
 use std::io::Write;
 
 pub fn save_to_file(file_name: &str, steps: &[String]) -> Result<(), std::io::Error> {
@@ -11,3 +12,17 @@ pub fn save_to_file(file_name: &str, steps: &[String]) -> Result<(), std::io::Er
     Ok(())
 }
 
+pub fn delete_saved_evaluations() -> Result<(), std::io::Error> {
+    let evaluations_directory = "evaluations/";
+
+    if let Ok(entries) = read_dir(evaluations_directory) {
+        for entry in entries {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                remove_file(path)?;
+            }
+        }
+    }
+    Ok(())
+}

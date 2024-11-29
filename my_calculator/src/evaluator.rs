@@ -122,6 +122,7 @@ impl Evaluator {
 
     fn evaluate_function(func: Token, arg: f64) -> f64 {
         match func {
+            Token::Abs => arg.abs(),
             Token::Sqrt => {
                 if arg < 0.0 {
                     panic!("Can't calculate square root of negative number!");
@@ -188,6 +189,7 @@ impl Evaluator {
             ASTNode::Function { func, argument } => {
                 let arg_str = Self::ast_to_string(argument);
                 let func_str = match func {
+                    Token::Abs => "abs",
                     Token::Sqrt => "sqrt",
                     Token::Log => "log",
                     Token::Sin => "sin",

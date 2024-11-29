@@ -8,6 +8,7 @@ pub enum Token {
     Multiply,
     Divide,
     Exponent,
+    Abs,
     Sqrt,
     Log,
     Sin,
@@ -101,6 +102,7 @@ impl Lexer {
                     }
 
                     match buffer.as_str() {
+                        "abs" => self.tokens.push(Token::Abs),
                         "sqrt" => self.tokens.push(Token::Sqrt),
                         "log" => self.tokens.push(Token::Log),
                         "sin" => self.tokens.push(Token::Sin),

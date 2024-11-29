@@ -83,7 +83,7 @@ impl Parser {
                         Err("Expected right parenthesis".to_string())
                     }
                 }
-                Token::Sin | Token::Cos | Token::Tg | Token::Cotg | Token::Log | Token::Sqrt=> {
+                Token::Sin | Token::Cos | Token::Tg | Token::Cotg | Token::Log | Token::Sqrt | Token::Abs => {
                     let func = token; 
                     self.next_token(); 
     
