@@ -11,10 +11,17 @@ pub enum Token {
     Abs,
     Sqrt,
     Log,
+    Fact,
     Sin,
     Cos,
     Tg,
     Cotg,
+    Sec,
+    Csc,
+    Asin,
+    Acos,
+    Atg,
+    Actg,
     LParen,
     RParen,
     Eof,
@@ -66,13 +73,12 @@ impl Lexer {
                     chars.next();
                 }
                 '^' => {
+                    self.tokens.push(Token::Exponent);
                     chars.next();
-                    if chars.peek() == Some(&'^') {
-                        self.tokens.push(Token::Exponent);
-                        chars.next();
-                    } else {
-                        eprintln!("Invalid token: ^");
-                    }
+                }
+                '!' => {
+                    self.tokens.push(Token::Fact);
+                    chars.next();
                 }
                 '0'..='9' | '.' => {
                     buffer.clear();
@@ -109,6 +115,12 @@ impl Lexer {
                         "cos" => self.tokens.push(Token::Cos),
                         "tg" => self.tokens.push(Token::Tg),
                         "cotg" => self.tokens.push(Token::Cotg),
+                        "sec" => self.tokens.push(Token::Sec),
+                        "csc" => self.tokens.push(Token::Csc),
+                        "asin" => self.tokens.push(Token::Asin),
+                        "acos" => self.tokens.push(Token::Acos),
+                        "atg" => self.tokens.push(Token::Atg),
+                        "actg" => self.tokens.push(Token::Actg),
                         "pi" => self.tokens.push(Token::Pi),
                         "e" => self.tokens.push(Token::Euler),
                         _ => eprintln!("Invalid keyword: {}", buffer),

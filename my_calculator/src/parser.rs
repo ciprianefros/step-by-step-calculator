@@ -2,7 +2,7 @@ use crate::lexer::Token;
 
 pub enum ASTNode {
     Number(f64),
-    Pi, 
+    Pi,
     Euler,
     BinaryOp {
         left: Box<ASTNode>,
@@ -17,7 +17,7 @@ pub enum ASTNode {
         func: Token,
         argument: Box<ASTNode>,
     },
-    Grouping(Box<ASTNode>)
+    Grouping(Box<ASTNode>),
 }
 pub struct Parser {
     tokens: Vec<Token>,
@@ -54,8 +54,17 @@ impl Parser {
         if let Some(token) = self.current_token().cloned() {
             match token {
                 Token::Number(value) => {
-                    self.next_token(); 
-                    Ok(ASTNode::Number(value))
+                    self.next_token();
+                    let mut node = ASTNode::Number(value);
+
+                    if let Some(Token::Fact) = self.current_token() {
+                        self.next_token();
+                        node = ASTNode::UnaryOp { 
+                            op: Token::Fact,
+                            operand : Box::new(node),
+                        }
+                    }
+                    Ok(node)
                 }
                 Token::Pi => {
                     self.next_token();
@@ -66,44 +75,75 @@ impl Parser {
                     Ok(ASTNode::Euler)
                 }
                 Token::Minus => {
-                    self.next_token(); 
-                    let operand = self.parse_primary()?; 
+                    self.next_token();
+                    let operand = self.parse_primary()?;
                     Ok(ASTNode::UnaryOp {
                         op: Token::Minus,
                         operand: Box::new(operand),
                     })
                 }
                 Token::LParen => {
-                    self.next_token(); 
-                    let expr = self.parse_inner_expression()?; 
+                    self.next_token();
+                    let expr = self.parse_inner_expression()?;
                     if let Some(Token::RParen) = self.current_token() {
-                        self.next_token(); 
-                        Ok(ASTNode::Grouping(Box::new(expr)))
+                        self.next_token();
+                        let mut node = ASTNode::Grouping(Box::new(expr));
+
+                        if let Some(Token::Fact) = self.current_token() {
+                            self.next_token();
+                            node = ASTNode::UnaryOp {
+                                op : Token::Fact,
+                                operand : Box::new(node),
+                            };
+                        }
+
+                        Ok(node)
                     } else {
                         Err("Expected right parenthesis".to_string())
                     }
                 }
-                Token::Sin | Token::Cos | Token::Tg | Token::Cotg | Token::Log | Token::Sqrt | Token::Abs => {
-                    let func = token; 
-                    self.next_token(); 
-    
+                Token::Sin
+                | Token::Cos
+                | Token::Tg
+                | Token::Cotg
+                | Token::Log
+                | Token::Sqrt
+                | Token::Abs
+                | Token::Sec
+                | Token::Csc
+                | Token::Asin
+                | Token::Acos
+                | Token::Atg
+                | Token::Actg => {
+                    let func = token;
+                    self.next_token();
+
                     if let Some(Token::LParen) = self.current_token() {
-                        self.next_token(); 
-                        let argument = self.parse_inner_expression()?; 
-    
+                        self.next_token();
+                        let argument = self.parse_inner_expression()?;
+
                         if let Some(Token::RParen) = self.current_token() {
-                            self.next_token(); 
-                            Ok(ASTNode::Function {
+                            self.next_token();
+                            let mut node = ASTNode::Function {
                                 func,
                                 argument: Box::new(argument),
-                            })
+                            };
+                            if let Some(Token::Fact) = self.current_token() {
+                                self.next_token();
+                                node = ASTNode::UnaryOp {
+                                    op : Token::Fact,
+                                    operand : Box::new(node),
+                                };
+                            }
+    
+                            Ok(node)
                         } else {
                             Err("Expected right parenthesis after function argument".to_string())
                         }
                     } else {
                         Err("Expected '(' after function name".to_string())
                     }
-                }    
+                }
                 _ => Err("Unexpected token".to_string()),
             }
         } else {
@@ -122,17 +162,17 @@ impl Parser {
         let mut left = self.parse_primary()?;
         while let Some(op) = self.current_token() {
             if op == &Token::Eof || op == &Token::RParen {
-                break; 
+                break;
             }
-    
+
             let precedence = Parser::get_precedence(op);
             if precedence < min_precedence {
-                break; 
+                break;
             }
-    
+
             let op = *self.current_token().unwrap();
             self.next_token();
-    
+
             let right = self.parse_binary_op(precedence + 1)?;
             left = ASTNode::BinaryOp {
                 left: Box::new(left),

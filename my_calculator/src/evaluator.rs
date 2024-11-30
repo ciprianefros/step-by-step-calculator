@@ -1,7 +1,6 @@
 use crate::lexer::Token;
 use crate::parser::ASTNode;
-use std::f64::consts::{PI, E};
-
+use std::f64::consts::{E, PI};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -24,7 +23,8 @@ impl Evaluator {
             if Some(&expression_string) != previous_step.as_ref() {
                 println!("= {}", expression_string.clone());
                 previous_step = Some(expression_string.clone());
-                self.evaluation_steps.push(format!("= {}",expression_string));
+                self.evaluation_steps
+                    .push(format!("= {}", expression_string));
             }
 
             ast = Self::reduce_ast(ast);
@@ -87,9 +87,7 @@ impl Evaluator {
                     }
                 }
             }
-            ASTNode::Grouping(expression) => {
-                Self::reduce_ast(*expression)
-            }
+            ASTNode::Grouping(expression) => Self::reduce_ast(*expression),
             ASTNode::Pi => ASTNode::Number(PI),
             ASTNode::Euler => ASTNode::Number(E),
             _ => ast,
@@ -116,6 +114,17 @@ impl Evaluator {
     fn evaluate_unary_op(op: Token, operand: f64) -> f64 {
         match op {
             Token::Minus => -operand,
+            Token::Fact => {
+                if operand != operand.floor() || operand < 0.0 {
+                    panic!("Factorial is only defined for non-negative integers!");
+                }
+                let n = operand as u64;
+                if n == 0 {
+                    1.0
+                } else {
+                    (1..=n).map(|x| x as f64).product()
+                }
+            }
             _ => panic!("Unknown unary operator"),
         }
     }
@@ -126,17 +135,16 @@ impl Evaluator {
             Token::Sqrt => {
                 if arg < 0.0 {
                     panic!("Can't calculate square root of negative number!");
-                }
-                else {
+                } else {
                     arg.sqrt()
                 }
             }
             Token::Log => {
-                if arg < 0.0 {
+                if arg < 1.0 {
                     panic!("Can't calculate logarithm of negative number!");
                 } else {
                     arg.log10()
-                } 
+                }
             }
             Token::Sin => arg.to_radians().sin(),
             Token::Cos => arg.to_radians().cos(),
@@ -144,7 +152,7 @@ impl Evaluator {
                 let radians = arg.to_radians();
 
                 if (radians / (PI / 2.0)).rem_euclid(2.0).abs() < 1e-10 {
-                    panic!("Can't calculate tg for that number!");
+                    panic!("Can't calculate tg for that number, cosine is 0!");
                 } else {
                     radians.tan()
                 }
@@ -153,9 +161,49 @@ impl Evaluator {
                 let radians = arg.to_radians();
 
                 if (radians / (PI)).rem_euclid(1.0).abs() < 1e-10 {
-                    panic!("Can't calculate cotg for that number!");
+                    panic!("Can't calculate cotg for that number, it is 0!");
                 } else {
                     1.0 / radians.tan()
+                }
+            }
+            Token::Sec => {
+                let radians = arg.to_radians();
+                if radians.cos().abs() < 1e-10 {
+                    panic!("Can't calculate sec for that number, cosine is 0!");
+                } else {
+                    1.0 / radians.cos()
+                }
+            }
+            Token::Csc => {
+                let radians = arg.to_radians();
+                if radians.sin().abs() < 1e-10 {
+                    panic!("Can't calculate csc for that number, sine is 0!");
+                } else {
+                    1.0 / radians.sin()
+                }
+            }
+            Token::Asin => {
+                if !(-1.0..=1.0).contains(&arg) {
+                    panic!("Can't calculate asin for values outside of [-1, 1]");
+                } else {
+                    arg.asin()
+                }
+            }
+            Token::Acos => {
+                if !(-1.0..=1.0).contains(&arg) {
+                    panic!("Can't calculate acos for values outside of [-1, 1]");
+                } else {
+                    arg.acos()
+                }
+            }
+            Token::Atg => {
+                arg.atan()
+            }
+            Token::Actg => {
+                if arg == 0.0 {
+                    panic!("Can't calculate actg for 0!");
+                } else {
+                    (PI / 2.0) - arg.atan()
                 }
             }
             _ => panic!("Unknown function"),
@@ -174,7 +222,7 @@ impl Evaluator {
                     Token::Minus => "-",
                     Token::Multiply => "*",
                     Token::Divide => "/",
-                    Token::Exponent => "^^",
+                    Token::Exponent => "^",
                     _ => panic!("Unknown binary operator"),
                 };
                 format!("{} {} {}", left_str, op_str, right_str)
@@ -183,6 +231,7 @@ impl Evaluator {
                 let operand_str = Self::ast_to_string(operand);
                 match op {
                     Token::Minus => format!("-{}", operand_str),
+                    Token::Fact => format!("{}!", operand_str),
                     _ => panic!("Unknown unary operator"),
                 }
             }
@@ -196,10 +245,16 @@ impl Evaluator {
                     Token::Cos => "cos",
                     Token::Tg => "tg",
                     Token::Cotg => "cotg",
+                    Token::Sec => "sec",
+                    Token::Csc => "csc",
+                    Token::Asin => "asin",
+                    Token::Acos => "acos",
+                    Token::Atg => "atg",
+                    Token::Actg => "actg",
                     _ => panic!("Unknown function"),
                 };
-                format!("{}({})", func_str, arg_str)
-            },
+                format!("{}({:.2})", func_str, arg_str)
+            }
             ASTNode::Grouping(expression) => {
                 format!("({})", Self::ast_to_string(expression))
             }
