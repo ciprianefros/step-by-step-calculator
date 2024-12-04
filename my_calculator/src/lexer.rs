@@ -141,3 +141,107 @@ impl Lexer {
     //   self.tokens.clone()
     //}
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_basic_tokens() {
+        let input = String::from("2 + 3 * 4 ^ 2");
+        let mut lexer = Lexer::new();
+        lexer.tokenize(&input);
+        assert_eq!(
+            lexer.tokens,
+            vec![
+                Token::Number(2.0),
+                Token::Plus,
+                Token::Number(3.0),
+                Token::Multiply,
+                Token::Number(4.0),
+                Token::Exponent,
+                Token::Number(2.0),
+                Token::Eof
+            ]
+        );
+    }
+    #[test]
+    fn check_trigonometric_tokens() {
+        let input = "sin(90) + cos(0) - sec(45)";
+        let mut lexer = Lexer::new();
+        lexer.tokenize(&input);
+
+        assert_eq!(
+            lexer.tokens,
+            vec![
+                Token::Sin,
+                Token::LParen,
+                Token::Number(90.0),
+                Token::RParen,
+                Token::Plus,
+                Token::Cos,
+                Token::LParen,
+                Token::Number(0.0),
+                Token::RParen,
+                Token::Minus,
+                Token::Sec,
+                Token::LParen,
+                Token::Number(45.0),
+                Token::RParen,
+                Token::Eof
+            ]
+        )
+    }
+    #[test]
+    fn check_invalid_characters() {
+        let input = "2 + 3 # 4";
+        let mut lexer = Lexer::new();
+        lexer.tokenize(&input);
+
+        assert_eq!(
+            lexer.tokens,
+            vec![
+                Token::Number(2.0),
+                Token::Plus,
+                Token::Number(3.0),
+                Token::Number(4.0),
+                Token::Eof
+            ]
+        )
+    }
+
+    #[test]
+    fn check_function_tokens() {
+        let input = "log(10) + sqrt(16)";
+        let mut lexer = Lexer::new();
+        lexer.tokenize(input);
+
+        assert_eq!(
+            lexer.tokens,
+            vec![
+                Token::Log,
+                Token::LParen,
+                Token::Number(10.0),
+                Token::RParen,
+                Token::Plus,
+                Token::Sqrt,
+                Token::LParen,
+                Token::Number(16.0),
+                Token::RParen,
+                Token::Eof
+            ]
+        );
+    }
+
+    #[test]
+    fn check_constants() {
+        let input = "pi + e";
+        let mut lexer = Lexer::new();
+        lexer.tokenize(input);
+
+        assert_eq!(
+            lexer.tokens,
+            vec![Token::Pi, Token::Plus, Token::Euler, Token::Eof]
+        );
+    }
+}

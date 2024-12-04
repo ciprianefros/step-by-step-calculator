@@ -88,8 +88,8 @@ impl Evaluator {
                 }
             }
             ASTNode::Grouping(expression) => Self::reduce_ast(*expression),
-            ASTNode::Pi => ASTNode::Number(PI),
-            ASTNode::Euler => ASTNode::Number(E),
+            ASTNode::Pi => ASTNode::Number(Self::truncate_number(PI)),
+            ASTNode::Euler => ASTNode::Number(Self::truncate_number(E)),
             _ => ast,
         }
     }
@@ -146,15 +146,15 @@ impl Evaluator {
                     arg.log10()
                 }
             }
-            Token::Sin => arg.to_radians().sin(),
-            Token::Cos => arg.to_radians().cos(),
+            Token::Sin => Self::truncate_number(arg.to_radians().sin()),
+            Token::Cos => Self::truncate_number(arg.to_radians().cos()),
             Token::Tg => {
                 let radians = arg.to_radians();
 
                 if (radians / (PI / 2.0)).rem_euclid(2.0).abs() < 1e-10 {
                     panic!("Can't calculate tg for that number, cosine is 0!");
                 } else {
-                    radians.tan()
+                    Self::truncate_number(radians.tan())
                 }
             }
             Token::Cotg => {
@@ -163,7 +163,7 @@ impl Evaluator {
                 if (radians / (PI)).rem_euclid(1.0).abs() < 1e-10 {
                     panic!("Can't calculate cotg for that number, it is 0!");
                 } else {
-                    1.0 / radians.tan()
+                    Self::truncate_number(1.0 / radians.tan())
                 }
             }
             Token::Sec => {
@@ -171,7 +171,7 @@ impl Evaluator {
                 if radians.cos().abs() < 1e-10 {
                     panic!("Can't calculate sec for that number, cosine is 0!");
                 } else {
-                    1.0 / radians.cos()
+                    Self::truncate_number(1.0 / radians.cos())
                 }
             }
             Token::Csc => {
@@ -179,31 +179,29 @@ impl Evaluator {
                 if radians.sin().abs() < 1e-10 {
                     panic!("Can't calculate csc for that number, sine is 0!");
                 } else {
-                    1.0 / radians.sin()
+                    Self::truncate_number(1.0 / radians.sin())
                 }
             }
             Token::Asin => {
                 if !(-1.0..=1.0).contains(&arg) {
                     panic!("Can't calculate asin for values outside of [-1, 1]");
                 } else {
-                    arg.asin()
+                    Self::truncate_number(arg.asin())
                 }
             }
             Token::Acos => {
                 if !(-1.0..=1.0).contains(&arg) {
                     panic!("Can't calculate acos for values outside of [-1, 1]");
                 } else {
-                    arg.acos()
+                    Self::truncate_number(arg.acos())
                 }
             }
-            Token::Atg => {
-                arg.atan()
-            }
+            Token::Atg => Self::truncate_number(arg.atan()),
             Token::Actg => {
                 if arg == 0.0 {
                     panic!("Can't calculate actg for 0!");
                 } else {
-                    (PI / 2.0) - arg.atan()
+                    Self::truncate_number((PI / 2.0) - arg.atan())
                 }
             }
             _ => panic!("Unknown function"),
@@ -260,4 +258,127 @@ impl Evaluator {
             }
         }
     }
+    fn truncate_number(value: f64) -> f64 {
+        (value * 100.0).round() / 100.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::Token;
+    use crate::parser::ASTNode;
+
+    #[test]
+    fn test_basic_arithmetic() {
+        let mut evaluator = Evaluator::new();
+
+        let ast = ASTNode::BinaryOp {
+            left: Box::new(ASTNode::Number(5.0)),
+            op: Token::Plus,
+            right: Box::new(ASTNode::Number(3.0)),
+        };
+        assert_eq!(evaluator.evaluate_and_print(ast), 8.0);
+
+        let ast = ASTNode::BinaryOp {
+            left: Box::new(ASTNode::Number(5.0)),
+            op: Token::Multiply,
+            right: Box::new(ASTNode::Number(3.0)),
+        };
+        assert_eq!(evaluator.evaluate_and_print(ast), 15.0);
+    }
+
+    #[test]
+    fn test_trigonometric_functions() {
+        let mut evaluator = Evaluator::new();
+
+        let ast = ASTNode::Function {
+            func: Token::Sin,
+            argument: Box::new(ASTNode::Number(30.0)), // sin(30°) = 0.5
+        };
+        assert_eq!(evaluator.evaluate_and_print(ast), 0.5);
+
+        let ast = ASTNode::Function {
+            func: Token::Cos,
+            argument: Box::new(ASTNode::Number(60.0)), // cos(60°) = 0.5
+        };
+        assert_eq!(evaluator.evaluate_and_print(ast), 0.5);
+    }
+
+    #[test]
+    fn test_unary_operations() {
+        let mut evaluator = Evaluator::new();
+
+        let ast = ASTNode::UnaryOp {
+            op: Token::Minus,
+            operand: Box::new(ASTNode::Number(7.0)),
+        };
+        assert_eq!(evaluator.evaluate_and_print(ast), -7.0);
+
+        let ast = ASTNode::UnaryOp {
+            op: Token::Fact,
+            operand: Box::new(ASTNode::Number(5.0)),
+        };
+        assert_eq!(evaluator.evaluate_and_print(ast), 120.0);
+    }
+
+    #[test]
+    fn test_constants() {
+        let mut evaluator = Evaluator::new();
+
+        let ast = ASTNode::Pi;
+        assert_eq!(evaluator.evaluate_and_print(ast), 3.14);
+
+        let ast = ASTNode::Euler;
+        assert_eq!(evaluator.evaluate_and_print(ast), 2.72);
+    }
+
+    #[test]
+    fn test_nested_expressions() {
+        let mut evaluator = Evaluator::new();
+
+        let ast = ASTNode::BinaryOp {
+            left: Box::new(ASTNode::Number(3.0)),
+            op: Token::Plus,
+            right: Box::new(ASTNode::BinaryOp {
+                left: Box::new(ASTNode::Number(4.0)),
+                op: Token::Multiply,
+                right: Box::new(ASTNode::Number(2.0)),
+            }),
+        };
+        // 3 + (4 * 2) = 3 + 8 = 11
+        assert_eq!(evaluator.evaluate_and_print(ast), 11.0);
+    }
+    #[test]
+    fn test_edge_case_trigonometric() {
+        let mut evaluator = Evaluator::new();
+
+        //test pentru tg unde a aprope de infint
+        let ast = ASTNode::Function {
+            func: Token::Tg,
+            argument: Box::new(ASTNode::Number(89.999)), 
+        };
+        let result = evaluator.evaluate_and_print(ast);
+        assert!(result.is_finite());
+
+        // Test pentru cotg unde este aproape 0
+        let ast = ASTNode::Function {
+            func: Token::Cotg,
+            argument: Box::new(ASTNode::Number(179.999)), 
+        };
+        let result = evaluator.evaluate_and_print(ast);
+        assert!(result.is_finite());
+    }
+    #[test]
+    #[should_panic(expected = "Can't divide number by 0")]
+    fn test_division_by_zero() {
+        let mut evaluator = Evaluator::new();
+
+        let ast = ASTNode::BinaryOp {
+            left: Box::new(ASTNode::Number(5.0)),
+            op: Token::Divide,
+            right: Box::new(ASTNode::Number(0.0)),
+        };
+        evaluator.evaluate_and_print(ast);
+}
 }

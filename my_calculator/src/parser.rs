@@ -1,5 +1,6 @@
 use crate::lexer::Token;
 
+#[derive(Debug, PartialEq)]
 pub enum ASTNode {
     Number(f64),
     Pi,
@@ -19,6 +20,7 @@ pub enum ASTNode {
     },
     Grouping(Box<ASTNode>),
 }
+#[derive(Debug, PartialEq)]
 pub struct Parser {
     tokens: Vec<Token>,
     position: usize,
@@ -59,9 +61,9 @@ impl Parser {
 
                     if let Some(Token::Fact) = self.current_token() {
                         self.next_token();
-                        node = ASTNode::UnaryOp { 
+                        node = ASTNode::UnaryOp {
                             op: Token::Fact,
-                            operand : Box::new(node),
+                            operand: Box::new(node),
                         }
                     }
                     Ok(node)
@@ -92,8 +94,8 @@ impl Parser {
                         if let Some(Token::Fact) = self.current_token() {
                             self.next_token();
                             node = ASTNode::UnaryOp {
-                                op : Token::Fact,
-                                operand : Box::new(node),
+                                op: Token::Fact,
+                                operand: Box::new(node),
                             };
                         }
 
@@ -131,11 +133,11 @@ impl Parser {
                             if let Some(Token::Fact) = self.current_token() {
                                 self.next_token();
                                 node = ASTNode::UnaryOp {
-                                    op : Token::Fact,
-                                    operand : Box::new(node),
+                                    op: Token::Fact,
+                                    operand: Box::new(node),
                                 };
                             }
-    
+
                             Ok(node)
                         } else {
                             Err("Expected right parenthesis after function argument".to_string())
@@ -181,5 +183,137 @@ impl Parser {
             };
         }
         Ok(left)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::{Lexer, Token};
+
+    fn lex_input(input: &str) -> Vec<Token> {
+        let mut lexer = Lexer::new();
+        lexer.tokenize(input);
+        lexer.tokens
+    }
+
+    #[test]
+    fn test_simple_addition() {
+        let tokens = lex_input("2 + 3");
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse_expression().unwrap();
+
+        assert_eq!(
+            ast,
+            ASTNode::BinaryOp {
+                left: Box::new(ASTNode::Number(2.0)),
+                op: Token::Plus,
+                right: Box::new(ASTNode::Number(3.0)),
+            }
+        );
+    }
+
+    #[test]
+    fn test_constants() {
+        let tokens = lex_input("pi + e");
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse_expression().unwrap();
+
+        assert_eq!(
+            ast,
+            ASTNode::BinaryOp {
+                left: Box::new(ASTNode::Pi),
+                op: Token::Plus,
+                right: Box::new(ASTNode::Euler),
+            }
+        );
+    }
+
+    #[test]
+    fn test_unary_operations() {
+        let tokens = lex_input("-5!");
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse_expression().unwrap();
+
+        assert_eq!(
+            ast,
+            ASTNode::UnaryOp {
+                op: Token::Minus,
+                operand: Box::new(ASTNode::UnaryOp {
+                    op: Token::Fact,
+                    operand: Box::new(ASTNode::Number(5.0)),
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn test_function_call() {
+        let tokens = lex_input("sin(pi)");
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse_expression().unwrap();
+
+        assert_eq!(
+            ast,
+            ASTNode::Function {
+                func: Token::Sin,
+                argument: Box::new(ASTNode::Pi),
+            }
+        );
+    }
+
+    #[test]
+    fn test_grouping_and_precedence() {
+        let tokens = lex_input("(2 + 3) * 4");
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse_expression().unwrap();
+
+        assert_eq!(
+            ast,
+            ASTNode::BinaryOp {
+                left: Box::new(ASTNode::Grouping(Box::new(ASTNode::BinaryOp {
+                    left: Box::new(ASTNode::Number(2.0)),
+                    op: Token::Plus,
+                    right: Box::new(ASTNode::Number(3.0)),
+                }))),
+                op: Token::Multiply,
+                right: Box::new(ASTNode::Number(4.0)),
+            }
+        );
+    }
+
+    #[test]
+    fn test_complex_expression() {
+        let tokens = lex_input("3 + sin(2 * pi) - log(10) ^ 2");
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse_expression().unwrap();
+
+        assert_eq!(
+            ast,
+            ASTNode::BinaryOp {
+                left: Box::new(ASTNode::BinaryOp {
+                    left: Box::new(ASTNode::Number(3.0)),
+                    op: Token::Plus,
+                    right: Box::new(ASTNode::Function {
+                        func: Token::Sin,
+                        argument: Box::new(ASTNode::BinaryOp {
+                            left: Box::new(ASTNode::Number(2.0)),
+                            op: Token::Multiply,
+                            right: Box::new(ASTNode::Pi),
+                        }),
+                    }),
+                }),
+                op: Token::Minus,
+                right: Box::new(ASTNode::BinaryOp {
+                    left: Box::new(ASTNode::Function {
+                        func: Token::Log,
+                        argument: Box::new(ASTNode::Number(10.0)),
+                    }),
+                    op: Token::Exponent,
+                    right: Box::new(ASTNode::Number(2.0)),
+                }),
+            }
+        );
     }
 }

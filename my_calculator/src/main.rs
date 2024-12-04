@@ -6,8 +6,8 @@ mod utils;
 use evaluator::Evaluator;
 use lexer::Lexer;
 use parser::Parser;
-use std::{thread, time};
 use std::io::{self, Write};
+use std::{thread, time};
 use utils::{delete_saved_evaluations, save_to_file};
 
 fn main() {
