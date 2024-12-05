@@ -31,8 +31,8 @@ impl Evaluator {
         }
 
         if let ASTNode::Number(result) = ast {
-            println!("= {:.2}", result);
-            self.evaluation_steps.push(format!("= {:.2}", result));
+            println!("= {}", Self::truncate_number(result));
+            self.evaluation_steps.push(format!("= {}", Self::truncate_number(result)));
             result
         } else {
             panic!("Evaluation did not reduce to a single number!");
@@ -87,7 +87,14 @@ impl Evaluator {
                     }
                 }
             }
-            ASTNode::Grouping(expression) => Self::reduce_ast(*expression),
+            ASTNode::Grouping(expression) => {
+                let reduced_expression = Self::reduce_ast(*expression);
+                if let ASTNode::Number(_) = reduced_expression {
+                    reduced_expression
+                } else {
+                    ASTNode::Grouping(Box::new(reduced_expression))
+                }
+            }
             ASTNode::Pi => ASTNode::Number(Self::truncate_number(PI)),
             ASTNode::Euler => ASTNode::Number(Self::truncate_number(E)),
             _ => ast,
