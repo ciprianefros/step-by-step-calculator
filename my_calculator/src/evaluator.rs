@@ -16,7 +16,7 @@ impl Evaluator {
     pub fn get_evaluation_steps(self) -> Vec<String> {
         self.evaluation_steps.clone()
     }
-    pub fn evaluate_and_print(&mut self, mut ast: ASTNode) -> f64 {
+    pub fn evaluate_and_print(&mut self, mut ast: ASTNode) -> Result<f64, String> {
         let mut previous_step: Option<String> = None;
         while !Self::is_single_node(&ast) {
             let expression_string = Self::ast_to_string(&ast);
@@ -27,15 +27,16 @@ impl Evaluator {
                     .push(format!("= {}", expression_string));
             }
 
-            ast = Self::reduce_ast(ast);
+            ast = Self::reduce_ast(ast)?;
         }
 
         if let ASTNode::Number(result) = ast {
-            println!("= {}", Self::truncate_number(result));
-            self.evaluation_steps.push(format!("= {}", Self::truncate_number(result)));
-            result
+            let truncated = Self::truncate_number(result);
+            println!("= {}", truncated);
+            self.evaluation_steps.push(format!("= {}", truncated));
+            Ok(truncated)
         } else {
-            panic!("Evaluation did not reduce to a single number!");
+            Err("Evaluation did not reduce to a single number!".to_string())
         }
     }
 
@@ -43,175 +44,207 @@ impl Evaluator {
         matches!(ast, ASTNode::Number(_))
     }
 
-    fn reduce_ast(ast: ASTNode) -> ASTNode {
+    fn reduce_ast(ast: ASTNode) -> Result<ASTNode, String> {
         match ast {
             ASTNode::BinaryOp { left, op, right } => {
                 if let ASTNode::Number(left_val) = *left {
                     if let ASTNode::Number(right_val) = *right {
-                        let result = Self::evaluate_binary_op(left_val, op, right_val);
-                        ASTNode::Number(result)
+                        let result = Self::evaluate_binary_op(left_val, op, right_val)?;
+                        Ok(ASTNode::Number(result))
                     } else {
-                        ASTNode::BinaryOp {
+                        Ok(ASTNode::BinaryOp {
                             left: Box::new(ASTNode::Number(left_val)),
                             op,
-                            right: Box::new(Self::reduce_ast(*right)),
-                        }
+                            right: Box::new(Self::reduce_ast(*right)?),
+                        })
                     }
                 } else {
-                    ASTNode::BinaryOp {
-                        left: Box::new(Self::reduce_ast(*left)),
+                    Ok(ASTNode::BinaryOp {
+                        left: Box::new(Self::reduce_ast(*left)?),
                         op,
                         right,
-                    }
+                    })
                 }
             }
             ASTNode::UnaryOp { op, operand } => {
                 if let ASTNode::Number(operand_val) = *operand {
-                    let result = Self::evaluate_unary_op(op, operand_val);
-                    ASTNode::Number(result)
+                    let result = Self::evaluate_unary_op(op, operand_val)?;
+                    Ok(ASTNode::Number(result))
                 } else {
-                    ASTNode::UnaryOp {
+                    let reduced_operand = Self::reduce_ast(*operand)?;
+                    Ok(ASTNode::UnaryOp {
                         op,
-                        operand: Box::new(Self::reduce_ast(*operand)),
-                    }
+                        operand: Box::new(reduced_operand),
+                    })
                 }
             }
             ASTNode::Function { func, argument } => {
                 if let ASTNode::Number(arg_val) = *argument {
-                    let result = Self::evaluate_function(func, arg_val);
-                    ASTNode::Number(result)
+                    let result = Self::evaluate_function(func, arg_val)?;
+                    Ok(ASTNode::Number(result))
                 } else {
-                    ASTNode::Function {
+                    let reduced_argument = Self::reduce_ast(*argument)?;
+                    Ok(ASTNode::Function {
                         func,
-                        argument: Box::new(Self::reduce_ast(*argument)),
+                        argument: Box::new(reduced_argument),
+                    })
+                }
+            }
+            ASTNode::LogBase { base, number } => {
+                let reduced_base = Self::reduce_ast(*base)?;
+                let reduced_number = Self::reduce_ast(*number)?;
+
+                match (reduced_base, reduced_number) {
+                    (ASTNode::Number(base_val), ASTNode::Number(number_val)) => {
+                        let result = Self::evaluate_log_base(base_val, number_val)?;
+                        Ok(ASTNode::Number(result))
                     }
+                    (reduced_base, reduced_number) => Ok(ASTNode::LogBase {
+                        base: Box::new(reduced_base),
+                        number: Box::new(reduced_number),
+                    }),
                 }
             }
             ASTNode::Grouping(expression) => {
-                let reduced_expression = Self::reduce_ast(*expression);
+                let reduced_expression = Self::reduce_ast(*expression)?;
                 if let ASTNode::Number(_) = reduced_expression {
-                    reduced_expression
+                    Ok(reduced_expression)
                 } else {
-                    ASTNode::Grouping(Box::new(reduced_expression))
+                    Ok(ASTNode::Grouping(Box::new(reduced_expression)))
                 }
             }
-            ASTNode::Pi => ASTNode::Number(Self::truncate_number(PI)),
-            ASTNode::Euler => ASTNode::Number(Self::truncate_number(E)),
-            _ => ast,
+            ASTNode::Pi => Ok(ASTNode::Number(Self::truncate_number(PI))),
+            ASTNode::Euler => Ok(ASTNode::Number(Self::truncate_number(E))),
+            _ => Ok(ast),
         }
     }
 
-    fn evaluate_binary_op(left: f64, op: Token, right: f64) -> f64 {
+    fn evaluate_binary_op(left: f64, op: Token, right: f64) -> Result<f64, String> {
         match op {
-            Token::Plus => left + right,
-            Token::Minus => left - right,
-            Token::Multiply => left * right,
+            Token::Plus => Ok(left + right),
+            Token::Minus => Ok(left - right),
+            Token::Multiply => Ok(left * right),
             Token::Divide => {
                 if right == 0.0 {
-                    panic!("Can't divide number by 0")
+                    Err("Can't divide number by 0".to_string())
                 } else {
-                    left / right
+                    Ok(left / right)
                 }
             }
-            Token::Exponent => left.powf(right),
-            _ => panic!("Unknown binary operator"),
+            Token::Exponent => Ok(left.powf(right)),
+            _ => Err("Unknown binary operator".to_string()),
         }
     }
 
-    fn evaluate_unary_op(op: Token, operand: f64) -> f64 {
+    fn evaluate_unary_op(op: Token, operand: f64) -> Result<f64, String> {
         match op {
-            Token::Minus => -operand,
+            Token::Minus => Ok(-operand),
             Token::Fact => {
                 if operand != operand.floor() || operand < 0.0 {
-                    panic!("Factorial is only defined for non-negative integers!");
+                    return Err("Factorial is only defined for non-negative integers!".to_string());
                 }
                 let n = operand as u64;
                 if n == 0 {
-                    1.0
+                    Ok(1.0)
                 } else {
-                    (1..=n).map(|x| x as f64).product()
+                    Ok((1..=n).map(|x| x as f64).product())
                 }
             }
-            _ => panic!("Unknown unary operator"),
+            _ => Err("Unknown unary operator".to_string()),
         }
     }
+    fn evaluate_log_base(base: f64, number: f64) -> Result<f64, String> {
+        if base <= 0.0 {
+            return Err("The base of logarithm must be greater than zero!".to_string());
+        }
 
-    fn evaluate_function(func: Token, arg: f64) -> f64 {
+        if (base - 1.0).abs() <= f64::EPSILON {
+            return Err("The base of logarithm cannot be 1!".to_string());
+        }
+
+        if number <= 0.0 {
+            return Err("Can't calculate logarithm of negative number!".to_string());
+        }
+
+        Ok(number.ln() / base.ln())
+    }
+
+    fn evaluate_function(func: Token, arg: f64) -> Result<f64, String> {
         match func {
-            Token::Abs => arg.abs(),
+            Token::Abs => Ok(arg.abs()),
             Token::Sqrt => {
                 if arg < 0.0 {
-                    panic!("Can't calculate square root of negative number!");
+                    Err("Can't calculate square root of negative number!".to_string())
                 } else {
-                    arg.sqrt()
+                    Ok(arg.sqrt())
                 }
             }
-            Token::Log => {
-                if arg < 1.0 {
-                    panic!("Can't calculate logarithm of negative number!");
+            Token::Ln => {
+                if arg <= 0.0 {
+                    Err("Can't calculate logarithm of negative number!".to_string())
                 } else {
-                    arg.log10()
+                    Ok(arg.ln())
                 }
             }
-            Token::Sin => Self::truncate_number(arg.to_radians().sin()),
-            Token::Cos => Self::truncate_number(arg.to_radians().cos()),
+            Token::Sin => Ok(Self::truncate_number(arg.to_radians().sin())),
+            Token::Cos => Ok(Self::truncate_number(arg.to_radians().cos())),
             Token::Tg => {
                 let radians = arg.to_radians();
 
                 if (radians / (PI / 2.0)).rem_euclid(2.0).abs() < 1e-10 {
-                    panic!("Can't calculate tg for that number, cosine is 0!");
+                    Err("Can't calculate tg for that number, cosine is 0!".to_string())
                 } else {
-                    Self::truncate_number(radians.tan())
+                    Ok(Self::truncate_number(radians.tan()))
                 }
             }
             Token::Cotg => {
                 let radians = arg.to_radians();
 
                 if (radians / (PI)).rem_euclid(1.0).abs() < 1e-10 {
-                    panic!("Can't calculate cotg for that number, it is 0!");
+                    Err("Can't calculate cotg for that number, it is 0!".to_string())
                 } else {
-                    Self::truncate_number(1.0 / radians.tan())
+                    Ok(Self::truncate_number(1.0 / radians.tan()))
                 }
             }
             Token::Sec => {
                 let radians = arg.to_radians();
                 if radians.cos().abs() < 1e-10 {
-                    panic!("Can't calculate sec for that number, cosine is 0!");
+                    Err("Can't calculate sec for that number, cosine is 0!".to_string())
                 } else {
-                    Self::truncate_number(1.0 / radians.cos())
+                    Ok(Self::truncate_number(1.0 / radians.cos()))
                 }
             }
             Token::Csc => {
                 let radians = arg.to_radians();
                 if radians.sin().abs() < 1e-10 {
-                    panic!("Can't calculate csc for that number, sine is 0!");
+                    Err("Can't calculate csc for that number, sine is 0!".to_string())
                 } else {
-                    Self::truncate_number(1.0 / radians.sin())
+                    Ok(Self::truncate_number(1.0 / radians.sin()))
                 }
             }
             Token::Asin => {
                 if !(-1.0..=1.0).contains(&arg) {
-                    panic!("Can't calculate asin for values outside of [-1, 1]");
+                    Err("Can't calculate asin for values outside of [-1, 1]".to_string())
                 } else {
-                    Self::truncate_number(arg.asin())
+                    Ok(Self::truncate_number(arg.asin()))
                 }
             }
             Token::Acos => {
                 if !(-1.0..=1.0).contains(&arg) {
-                    panic!("Can't calculate acos for values outside of [-1, 1]");
+                    Err("Can't calculate acos for values outside of [-1, 1]".to_string())
                 } else {
-                    Self::truncate_number(arg.acos())
+                    Ok(Self::truncate_number(arg.acos()))
                 }
             }
-            Token::Atg => Self::truncate_number(arg.atan()),
+            Token::Atg => Ok(Self::truncate_number(arg.atan())),
             Token::Actg => {
                 if arg == 0.0 {
-                    panic!("Can't calculate actg for 0!");
+                    Err("Can't calculate actg for 0!".to_string())
                 } else {
-                    Self::truncate_number((PI / 2.0) - arg.atan())
+                    Ok(Self::truncate_number((PI / 2.0) - arg.atan()))
                 }
             }
-            _ => panic!("Unknown function"),
+            _ => Err("Unknown function".to_string()),
         }
     }
     fn ast_to_string(ast: &ASTNode) -> String {
@@ -228,7 +261,7 @@ impl Evaluator {
                     Token::Multiply => "*",
                     Token::Divide => "/",
                     Token::Exponent => "^",
-                    _ => panic!("Unknown binary operator"),
+                    _ => "Unknown binary operator",
                 };
                 format!("{} {} {}", left_str, op_str, right_str)
             }
@@ -237,7 +270,7 @@ impl Evaluator {
                 match op {
                     Token::Minus => format!("-{}", operand_str),
                     Token::Fact => format!("{}!", operand_str),
-                    _ => panic!("Unknown unary operator"),
+                    _ => "Unknown unary operator".to_string(),
                 }
             }
             ASTNode::Function { func, argument } => {
@@ -245,7 +278,7 @@ impl Evaluator {
                 let func_str = match func {
                     Token::Abs => "abs",
                     Token::Sqrt => "sqrt",
-                    Token::Log => "log",
+                    Token::Ln => "ln",
                     Token::Sin => "sin",
                     Token::Cos => "cos",
                     Token::Tg => "tg",
@@ -256,9 +289,14 @@ impl Evaluator {
                     Token::Acos => "acos",
                     Token::Atg => "atg",
                     Token::Actg => "actg",
-                    _ => panic!("Unknown function"),
+                    _ => "Unknown function",
                 };
-                format!("{}({:.2})", func_str, arg_str)
+                format!("{}({})", func_str, arg_str)
+            }
+            ASTNode::LogBase { base, number } => {
+                let base_str = Self::ast_to_string(base);
+                let number_str = Self::ast_to_string(number);
+                format!("log({},{})", base_str, number_str)
             }
             ASTNode::Grouping(expression) => {
                 format!("({})", Self::ast_to_string(expression))
@@ -285,14 +323,16 @@ mod tests {
             op: Token::Plus,
             right: Box::new(ASTNode::Number(3.0)),
         };
-        assert_eq!(evaluator.evaluate_and_print(ast), 8.0);
+        let result = evaluator.evaluate_and_print(ast).unwrap();
+        assert_eq!(result, 8.0);
 
         let ast = ASTNode::BinaryOp {
             left: Box::new(ASTNode::Number(5.0)),
             op: Token::Multiply,
             right: Box::new(ASTNode::Number(3.0)),
         };
-        assert_eq!(evaluator.evaluate_and_print(ast), 15.0);
+        let result = evaluator.evaluate_and_print(ast).unwrap();
+        assert_eq!(result, 15.0);
     }
 
     #[test]
@@ -303,13 +343,15 @@ mod tests {
             func: Token::Sin,
             argument: Box::new(ASTNode::Number(30.0)), // sin(30°) = 0.5
         };
-        assert_eq!(evaluator.evaluate_and_print(ast), 0.5);
+        let result = evaluator.evaluate_and_print(ast).unwrap();
+        assert_eq!(result, 0.5);
 
         let ast = ASTNode::Function {
             func: Token::Cos,
             argument: Box::new(ASTNode::Number(60.0)), // cos(60°) = 0.5
         };
-        assert_eq!(evaluator.evaluate_and_print(ast), 0.5);
+        let result = evaluator.evaluate_and_print(ast).unwrap();
+        assert_eq!(result, 0.5);
     }
 
     #[test]
@@ -320,13 +362,13 @@ mod tests {
             op: Token::Minus,
             operand: Box::new(ASTNode::Number(7.0)),
         };
-        assert_eq!(evaluator.evaluate_and_print(ast), -7.0);
+        assert_eq!(evaluator.evaluate_and_print(ast).unwrap(), -7.0);
 
         let ast = ASTNode::UnaryOp {
             op: Token::Fact,
             operand: Box::new(ASTNode::Number(5.0)),
         };
-        assert_eq!(evaluator.evaluate_and_print(ast), 120.0);
+        assert_eq!(evaluator.evaluate_and_print(ast).unwrap(), 120.0);
     }
 
     #[test]
@@ -334,10 +376,10 @@ mod tests {
         let mut evaluator = Evaluator::new();
 
         let ast = ASTNode::Pi;
-        assert_eq!(evaluator.evaluate_and_print(ast), 3.14);
+        assert_eq!(evaluator.evaluate_and_print(ast).unwrap(), 3.14);
 
         let ast = ASTNode::Euler;
-        assert_eq!(evaluator.evaluate_and_print(ast), 2.72);
+        assert_eq!(evaluator.evaluate_and_print(ast).unwrap(), 2.72);
     }
 
     #[test]
@@ -354,7 +396,7 @@ mod tests {
             }),
         };
         // 3 + (4 * 2) = 3 + 8 = 11
-        assert_eq!(evaluator.evaluate_and_print(ast), 11.0);
+        assert_eq!(evaluator.evaluate_and_print(ast).unwrap(), 11.0);
     }
     #[test]
     fn test_edge_case_trigonometric() {
@@ -363,17 +405,17 @@ mod tests {
         //test pentru tg unde a aprope de infint
         let ast = ASTNode::Function {
             func: Token::Tg,
-            argument: Box::new(ASTNode::Number(89.999)), 
+            argument: Box::new(ASTNode::Number(89.999)),
         };
-        let result = evaluator.evaluate_and_print(ast);
+        let result = evaluator.evaluate_and_print(ast).unwrap();
         assert!(result.is_finite());
 
         // Test pentru cotg unde este aproape 0
         let ast = ASTNode::Function {
             func: Token::Cotg,
-            argument: Box::new(ASTNode::Number(179.999)), 
+            argument: Box::new(ASTNode::Number(179.999)),
         };
-        let result = evaluator.evaluate_and_print(ast);
+        let result = evaluator.evaluate_and_print(ast).unwrap();
         assert!(result.is_finite());
     }
     #[test]
@@ -386,6 +428,10 @@ mod tests {
             op: Token::Divide,
             right: Box::new(ASTNode::Number(0.0)),
         };
-        evaluator.evaluate_and_print(ast);
-}
+        let result = evaluator.evaluate_and_print(ast);
+        match result {
+            Ok(_) => print!("Didn't panic!"),
+            Err(e) => panic!("{}", e),
+        }
+    }
 }

@@ -69,7 +69,13 @@ fn start_calculator() {
         match parser.parse_expression() {
             Ok(ast) => {
                 println!("Evaluating...");
-                evaluator.evaluate_and_print(ast);
+                match evaluator.evaluate_and_print(ast) {
+                    Ok(_) => println!("Evaluation Complete!"),
+                    Err(err) => {
+                        println!("Error: {}", err);
+                        continue;
+                    }
+                }
                 println!("Would you like to save this evaluation process?(y/n)");
                 let mut answer = String::new();
                 io::stdin()
@@ -77,7 +83,7 @@ fn start_calculator() {
                     .expect("Failed to read input");
                 let answer = answer.trim();
                 if answer.eq_ignore_ascii_case("y") {
-                    println!("Give it a name: ");
+                    println!("Give the file a name: ");
                     let mut file_name = String::new();
                     io::stdin()
                         .read_line(&mut file_name)
@@ -98,10 +104,11 @@ fn show_available_commands() {
     println!("\nAvailable Calculator operators and Commands:");
     println!("- Basic arithmetic operators: +, -, *, /");
     println!("- Exponentiation: ^ (e.g., 2 ^ 3)");
-    println!("- Trigonometric functions: sin, cos, tg, cotg (in degrees)");
+    println!("- Trigonometric functions: sin, cos, tg, cotg, sec, csc, asin, acos, atg, actg (in degrees)");
     println!("- Logarithmic functions: log (base 10)");
     println!("- Square root: sqrt");
     println!("- Absolute value: abs");
+    println!("- Factorial: !");
     println!("- Constants: pi (3.14159), e (2.71828)");
     println!("- Parentheses for grouping: ( and )");
     println!("- Step-by-step evaluation of expressions.");

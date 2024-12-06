@@ -18,6 +18,10 @@ pub enum ASTNode {
         func: Token,
         argument: Box<ASTNode>,
     },
+    LogBase {
+        base: Box<ASTNode>,
+        number : Box<ASTNode>,
+    },
     Grouping(Box<ASTNode>),
 }
 #[derive(Debug, PartialEq)]
@@ -70,11 +74,27 @@ impl Parser {
                 }
                 Token::Pi => {
                     self.next_token();
-                    Ok(ASTNode::Pi)
+                    let mut node = ASTNode::Pi;
+                    if let Some(Token::Fact) = self.current_token() {
+                        self.next_token();
+                        node = ASTNode::UnaryOp {
+                            op: Token::Fact,
+                            operand: Box::new(node),
+                        };
+                    }
+                    Ok(node)
                 }
                 Token::Euler => {
                     self.next_token();
-                    Ok(ASTNode::Euler)
+                    let mut node = ASTNode::Euler;
+                    if let Some(Token::Fact) = self.current_token() {
+                        self.next_token();
+                        node = ASTNode::UnaryOp {
+                            op: Token::Fact,
+                            operand: Box::new(node),
+                        };
+                    }
+                    Ok(node)
                 }
                 Token::Minus => {
                     self.next_token();
@@ -104,11 +124,52 @@ impl Parser {
                         Err("Expected right parenthesis".to_string())
                     }
                 }
+                Token::Log => {
+                    self.next_token();
+                    if let Some(Token::LParen) = self.current_token() {
+                        self.next_token();
+                    } else {
+                        return Err("Expected '(' after log function".to_string());
+                    }
+
+                    let first_arg = self.parse_inner_expression()?;
+
+
+                    let base;
+                    let number;
+
+                    if let Some(Token::Comma) = self.current_token() {
+                        self.next_token();
+                        base = first_arg;
+                        number = self.parse_inner_expression()?;
+                    } else {
+                        base = ASTNode::Number(2.0);
+                        number = first_arg;
+                    }
+
+                    if let Some(Token::RParen) = self.current_token() {
+                        self.next_token();
+                    } else {
+                        return Err("After the log function arguments there should be ')'".to_string());
+                    }
+                    let mut node = ASTNode::LogBase {
+                        base: Box::new(base),
+                        number: Box::new(number),
+                    };
+                    if let Some(Token::Fact) = self.current_token() {
+                        self.next_token();
+                        node = ASTNode::UnaryOp {
+                            op: Token::Fact,
+                            operand: Box::new(node),
+                        };
+                    }
+                    Ok(node)
+                },
                 Token::Sin
                 | Token::Cos
                 | Token::Tg
                 | Token::Cotg
-                | Token::Log
+                | Token::Ln
                 | Token::Sqrt
                 | Token::Abs
                 | Token::Sec
@@ -154,7 +215,7 @@ impl Parser {
     }
     fn get_precedence(op: &Token) -> u8 {
         match op {
-            Token::Plus | Token::Minus => 1,
+            Token::Plus | Token::Minus  => 1,
             Token::Multiply | Token::Divide => 2,
             Token::Exponent => 3,
             _ => 0,
@@ -163,7 +224,7 @@ impl Parser {
     fn parse_binary_op(&mut self, min_precedence: u8) -> Result<ASTNode, String> {
         let mut left = self.parse_primary()?;
         while let Some(op) = self.current_token() {
-            if op == &Token::Eof || op == &Token::RParen {
+            if op == &Token::Eof || op == &Token::RParen || op == &Token::Comma {
                 break;
             }
 
@@ -285,7 +346,7 @@ mod tests {
 
     #[test]
     fn test_complex_expression() {
-        let tokens = lex_input("3 + sin(2 * pi) - log(10) ^ 2");
+        let tokens = lex_input("3 + sin(2 * pi) - log(2,10) ^ 2");
         let mut parser = Parser::new(tokens);
         let ast = parser.parse_expression().unwrap();
 
@@ -306,13 +367,29 @@ mod tests {
                 }),
                 op: Token::Minus,
                 right: Box::new(ASTNode::BinaryOp {
-                    left: Box::new(ASTNode::Function {
-                        func: Token::Log,
-                        argument: Box::new(ASTNode::Number(10.0)),
+                    left: Box::new(ASTNode::LogBase {
+                        base: Box::new(ASTNode::Number(2.0)),
+                        number: Box::new(ASTNode::Number(10.0)),
                     }),
                     op: Token::Exponent,
                     right: Box::new(ASTNode::Number(2.0)),
                 }),
+            }
+        );
+    }
+
+    #[test]
+    fn check_factorial_after_functions() {
+        let tokens = lex_input("sin(30) + 4!");
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse_expression().unwrap();
+
+        assert_eq!(
+            ast,
+            ASTNode::BinaryOp {
+                left: Box::new(ASTNode::Function { func: Token::Sin, argument: Box::new(ASTNode::Number(30.0)) }),
+                op: Token::Plus,
+                right: Box::new(ASTNode::UnaryOp { op: Token::Fact, operand: Box::new(ASTNode::Number(4.0)) }),     
             }
         );
     }

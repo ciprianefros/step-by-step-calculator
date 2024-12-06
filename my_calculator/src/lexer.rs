@@ -11,6 +11,7 @@ pub enum Token {
     Abs,
     Sqrt,
     Log,
+    Ln,
     Fact,
     Sin,
     Cos,
@@ -24,6 +25,7 @@ pub enum Token {
     Actg,
     LParen,
     RParen,
+    Comma,
     Eof,
 }
 #[derive(Clone, Debug)]
@@ -41,6 +43,7 @@ impl Lexer {
             );
             return;
         }
+        let input = input.to_ascii_lowercase();
         let mut chars = input.chars().peekable();
         let mut buffer = String::new();
 
@@ -111,6 +114,7 @@ impl Lexer {
                         "abs" => self.tokens.push(Token::Abs),
                         "sqrt" => self.tokens.push(Token::Sqrt),
                         "log" => self.tokens.push(Token::Log),
+                        "ln" => self.tokens.push(Token::Ln),
                         "sin" => self.tokens.push(Token::Sin),
                         "cos" => self.tokens.push(Token::Cos),
                         "tg" => self.tokens.push(Token::Tg),
@@ -125,6 +129,10 @@ impl Lexer {
                         "e" => self.tokens.push(Token::Euler),
                         _ => eprintln!("Invalid keyword: {}", buffer),
                     }
+                }
+                ',' => {
+                    self.tokens.push(Token::Comma);
+                    chars.next();
                 }
                 ' ' => {
                     chars.next();
