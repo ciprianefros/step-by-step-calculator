@@ -58,6 +58,9 @@ fn start_calculator() {
         let input = input.trim();
         if input.eq_ignore_ascii_case("quit") {
             break;
+        } else if input.is_empty() {
+            eprintln!("Please enter a non-empty expression!");
+            continue;
         }
 
         let mut lexer = Lexer::new();
@@ -105,7 +108,7 @@ fn show_available_commands() {
     println!("- Basic arithmetic operators: +, -, *, /");
     println!("- Exponentiation: ^ (e.g., 2 ^ 3)");
     println!("- Trigonometric functions: sin, cos, tg, cotg, sec, csc, asin, acos, atg, actg (in degrees)");
-    println!("- Logarithmic functions: log (base 10)");
+    println!("- Logarithmic functions: log(base, number), ln");
     println!("- Square root: sqrt");
     println!("- Absolute value: abs");
     println!("- Factorial: !");
@@ -115,6 +118,8 @@ fn show_available_commands() {
     println!("- Save evaluations to files.");
     println!("- Delete all saved evaluations.");
     println!("\nType \"quit\" at any time to exit a sub-menu.");
+
+    println!("Wait 10 seconds to go back to the main menu!");
     let sleep_time = time::Duration::from_secs(10);
     thread::sleep(sleep_time);
 }

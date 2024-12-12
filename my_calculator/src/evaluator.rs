@@ -296,6 +296,7 @@ impl Evaluator {
             ASTNode::LogBase { base, number } => {
                 let base_str = Self::ast_to_string(base);
                 let number_str = Self::ast_to_string(number);
+
                 format!("log({},{})", base_str, number_str)
             }
             ASTNode::Grouping(expression) => {

@@ -20,7 +20,7 @@ pub enum ASTNode {
     },
     LogBase {
         base: Box<ASTNode>,
-        number : Box<ASTNode>,
+        number: Box<ASTNode>,
     },
     Grouping(Box<ASTNode>),
 }
@@ -134,7 +134,6 @@ impl Parser {
 
                     let first_arg = self.parse_inner_expression()?;
 
-
                     let base;
                     let number;
 
@@ -150,7 +149,9 @@ impl Parser {
                     if let Some(Token::RParen) = self.current_token() {
                         self.next_token();
                     } else {
-                        return Err("After the log function arguments there should be ')'".to_string());
+                        return Err(
+                            "After the log function arguments there should be ')'".to_string()
+                        );
                     }
                     let mut node = ASTNode::LogBase {
                         base: Box::new(base),
@@ -164,7 +165,7 @@ impl Parser {
                         };
                     }
                     Ok(node)
-                },
+                }
                 Token::Sin
                 | Token::Cos
                 | Token::Tg
@@ -215,7 +216,7 @@ impl Parser {
     }
     fn get_precedence(op: &Token) -> u8 {
         match op {
-            Token::Plus | Token::Minus  => 1,
+            Token::Plus | Token::Minus => 1,
             Token::Multiply | Token::Divide => 2,
             Token::Exponent => 3,
             _ => 0,
@@ -246,7 +247,6 @@ impl Parser {
         Ok(left)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -387,9 +387,15 @@ mod tests {
         assert_eq!(
             ast,
             ASTNode::BinaryOp {
-                left: Box::new(ASTNode::Function { func: Token::Sin, argument: Box::new(ASTNode::Number(30.0)) }),
+                left: Box::new(ASTNode::Function {
+                    func: Token::Sin,
+                    argument: Box::new(ASTNode::Number(30.0))
+                }),
                 op: Token::Plus,
-                right: Box::new(ASTNode::UnaryOp { op: Token::Fact, operand: Box::new(ASTNode::Number(4.0)) }),     
+                right: Box::new(ASTNode::UnaryOp {
+                    op: Token::Fact,
+                    operand: Box::new(ASTNode::Number(4.0))
+                }),
             }
         );
     }
