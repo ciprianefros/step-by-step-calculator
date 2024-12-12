@@ -48,7 +48,7 @@ fn main() {
 fn start_calculator() {
     loop {
         let mut input = String::new();
-        print!("Enter a mathematical expression (or type \"quit\" to return to the main menu): ");
+        print!("Enter a mathematical expression (or type \"quit\" to return or \"help\" for help): ");
 
         io::stdout().flush().unwrap();
         io::stdin()
@@ -58,11 +58,14 @@ fn start_calculator() {
         let input = input.trim();
         if input.eq_ignore_ascii_case("quit") {
             break;
+        } else if input.eq_ignore_ascii_case("help") {
+            show_available_commands();
+            continue;
         } else if input.is_empty() {
             eprintln!("Please enter a non-empty expression!");
             continue;
         }
-
+        
         let mut lexer = Lexer::new();
         lexer.tokenize(input);
         //println!("Tokens: {:?}", lexer.tokens);
@@ -104,7 +107,7 @@ fn start_calculator() {
 }
 
 fn show_available_commands() {
-    println!("\nAvailable Calculator operators and Commands:");
+    println!("\nAvailable Calculator operators:");
     println!("- Basic arithmetic operators: +, -, *, /");
     println!("- Exponentiation: ^ (e.g., 2 ^ 3)");
     println!("- Trigonometric functions: sin, cos, tg, cotg, sec, csc, asin, acos, atg, actg (in degrees)");
@@ -114,12 +117,13 @@ fn show_available_commands() {
     println!("- Factorial: !");
     println!("- Constants: pi (3.14159), e (2.71828)");
     println!("- Parentheses for grouping: ( and )");
+    println!("\nFunctions of the application and Commands:");
     println!("- Step-by-step evaluation of expressions.");
     println!("- Save evaluations to files.");
     println!("- Delete all saved evaluations.");
     println!("\nType \"quit\" at any time to exit a sub-menu.");
 
-    println!("Wait 10 seconds to go back to the main menu!");
+    println!("Wait 10 seconds:)!");
     let sleep_time = time::Duration::from_secs(10);
     thread::sleep(sleep_time);
 }
