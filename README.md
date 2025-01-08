@@ -1,4 +1,4 @@
-# my-calculator
+# Step-by-step calculator
 
 ## Introduction
 This is the project I chose for the Rust Course @FII in the second year of my bachelor's degree. I chose to do this project because I like mathematical expressions and wanted to create something that is both usefull and practical.
@@ -93,7 +93,7 @@ This project is licensed under the MIT License.
 ```
 MIT License
 
-Copyright (C) 2025 Step-by-Step Calculator Team
+Copyright (C) 2025 Efros Ciprian
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
