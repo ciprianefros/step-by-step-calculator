@@ -44,13 +44,7 @@ cargo run --release
 ```
 Alternatively, execute the built binary directly:
 ```bash
-./target/release/step_calc
-```
-
-### Help Command
-To display the help message and a list of available commands, run:
-```bash
-./target/release/step_calc --help
+./target/release/my_calculator.exe
 ```
 
 ## Usage
